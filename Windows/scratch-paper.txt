@@ -9,3 +9,5 @@ To-Do:
         - digivolutions / de-digivolutions
         - name / stage / types
         - etc.
+
+[0922/070050.107:INFO:CONSOLE(1)] "'window.webkitStorageInfo' is deprecated. Please use 'navigator.webkitTemporaryStorage' or 'navigator.webkitPersistentStorage' instead.", source:  (1)        

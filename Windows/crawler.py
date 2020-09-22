@@ -1,4 +1,4 @@
-import sys, re
+import sys, re, datetime, json, csv, os
 from selenium import webdriver
 
 def get_digimon_codes(driver):
@@ -67,7 +67,7 @@ def get_digimon_evolutions(driver, digimon_code):
    print(rows_html)
    print(len(rows_html))
 
-def get_digimon_base_stats(driver, digimon_code):
+def get_level_99_base_stats(driver, digimon_code):
    digimon_info_base_url = r'https://www.grindosaur.com/en/games/digimon/digimon-story-cyber-sleuth/digimon'
    digimon_url = digimon_info_base_url + '/' + digimon_code
 
@@ -76,36 +76,100 @@ def get_digimon_base_stats(driver, digimon_code):
 
    stats_table_html = find_expr_in_html(
       r'<h2 id="base-stats"[^>]+>[^<]+<\/h2></div><div[^>]+>\s*<div[^>]+>\s*(<table[^>]+>.*?</table>)',
-      # r'<h2 id="base-stats"[^>]+>',
       html
+   )[0]
+
+   stats_list_html = find_expr_in_html(
+      r'<tr>.*?</tr>',
+      stats_table_html
    )
 
-   print(stats_table_html)
+   stats = {}
+
+   for html in stats_list_html:
+
+      stat_name = find_expr_in_html(
+         r'<th[^>]+>(.*?)</th>',
+         html
+      )[0]
+
+      if stat_name == 'Stats':
+         continue
+   
+      # the level 99 value of the stat
+      level_99_val = find_expr_in_html(
+         r'<td>(.*?)</td>',
+         html
+      )[-1]
+
+      stats[stat_name] = level_99_val
+
+   return stats
+
 
 def find_expr_in_html(expr, html):
     return re.findall(expr, html, re.S)
 
-options = webdriver.ChromeOptions()
-options.add_argument('headless')
+start_date = datetime.datetime.now()
+print("start: {}\n".format(start_date))
 
-driver = webdriver.Chrome(options=options)
+workspace = os.path.dirname(os.path.abspath(__file__))
+csv_path = workspace + r'\digimon_stats.csv'
+json_path = workspace + r'\digimon_data.json'
 
-# get_digimon_evolutions(driver, '1-kuramon')
-get_digimon_base_stats(driver, '1-kuramon')
+stat_data = None
 
-# digimon_codes = get_digimon_codes(driver)
+if os.path.exists(json_path):
+   with open(json_path) as json_data_file:
+      stat_data = json.load(json_data_file)
 
-# for digimon_code in digimon_codes:
-#    print(digimon_code)
-#    get_digimon_evolutions(driver, digimon_code)
-#    sys.exit()
+if os.path.exists(csv_path):
+   os.remove(csv_path)
 
+fields = ['Name', 'HP', 'SP', 'ATK', 'INT', 'DEF', 'SPD', 'Total']
+with open(csv_path, 'a') as stat_csv:
+   writer = csv.writer(stat_csv, lineterminator="\n")
+   writer.writerow(fields)
 
+if stat_data is None:
+   options = webdriver.ChromeOptions()
+   options.add_argument('headless')
 
+   driver = webdriver.Chrome('./chromedriver', options=options)
 
+   digimon_codes = get_digimon_codes(driver)
 
+   stat_data = {}
 
+   for digimon_code in digimon_codes:
+      print(digimon_code)
+      level_99_base_stats = get_level_99_base_stats(driver, digimon_code)
 
+      stat_data[digimon_code] = level_99_base_stats
 
+      row = [
+         digimon_code,
+         level_99_base_stats['HP'],
+         level_99_base_stats['SP'],
+         level_99_base_stats['ATK'],
+         level_99_base_stats['INT'],
+         level_99_base_stats['DEF'],
+         level_99_base_stats['SPD'],
+         level_99_base_stats['Total']
+      ]
 
-driver.quit()
+      with open(csv_path, 'a') as stat_csv:
+         writer = csv.writer(stat_csv, lineterminator="\n")
+         writer.writerow(row)
+
+   with open('./digimon_data.json', 'w') as outfile:
+      json.dump(stat_data, outfile)
+
+   driver.quit()
+else:
+   for key in stat_data:
+      print(key)
+
+end_date = datetime.datetime.now()
+print("\nend: {}\n".format(end_date))
+print("time elapsed: {}".format(end_date - start_date))
