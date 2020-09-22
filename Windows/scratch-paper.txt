@@ -1,0 +1,11 @@
+https://www.grindosaur.com/en/games/digimon/digimon-story-cyber-sleuth/digimon
+
+Selenium Notes:
+    https://github.com/scMarth/Learning/blob/master/python/selenium/Notes.txt
+
+
+To-Do:
+    - scrape other info
+        - digivolutions / de-digivolutions
+        - name / stage / types
+        - etc.
